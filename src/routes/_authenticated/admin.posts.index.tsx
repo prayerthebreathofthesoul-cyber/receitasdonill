@@ -5,7 +5,7 @@ import { adminListPosts, deletePost } from "@/lib/admin.functions";
 import { Pencil, Trash2, ExternalLink, Plus } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/admin/posts")({
+export const Route = createFileRoute("/_authenticated/admin/posts/")({
   component: PostsList,
 });
 
