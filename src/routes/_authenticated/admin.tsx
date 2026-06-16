@@ -34,7 +34,7 @@ function AdminLayout() {
           {NAV.map((n) => {
             const active = n.exact ? pathname === n.to : pathname.startsWith(n.to);
             return (
-              <Link key={n.to} to={n.to} className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${active ? "bg-primary text-primary-foreground" : "text-foreground/80 hover:bg-accent"}`}>
+              <Link key={n.to} to={n.to as any} className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${active ? "bg-primary text-primary-foreground" : "text-foreground/80 hover:bg-accent"}`}>
                 <n.icon className="h-4 w-4" /> {n.label}
               </Link>
             );
