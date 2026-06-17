@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AdSlotProps {
@@ -15,12 +15,9 @@ export function AdSlot({
   className = "",
 }: AdSlotProps) {
   const location = useLocation();
-  const ref = useRef<HTMLDivElement>(null);
-  const [renderKey, setRenderKey] = useState(0);
+  const ref = useRef<HTMLDivElement | null>(null);
 
-  const routeKey = useMemo(() => {
-    return `${location.pathname}-${location.searchStr || ""}`;
-  }, [location.pathname, location.searchStr]);
+  const routeKey = location.href;
 
   const { data } = useQuery({
     queryKey: ["ad-slot", position],
@@ -43,34 +40,31 @@ export function AdSlot({
       };
     },
     staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const code = data?.code ?? null;
 
   useEffect(() => {
-    setRenderKey((current) => current + 1);
-  }, [routeKey, position]);
+    const slotElement = ref.current;
 
-  useEffect(() => {
-    const el = ref.current;
+    if (!slotElement || !code) return;
 
-    if (!el || !code) return;
-
-    let isCancelled = false;
+    let cancelled = false;
     const insertedScripts: HTMLScriptElement[] = [];
 
     const timer = window.setTimeout(() => {
-      if (isCancelled || !ref.current) return;
+      const currentSlot = ref.current;
 
-      const currentEl = ref.current;
+      if (cancelled || !currentSlot) return;
 
-      currentEl.innerHTML = "";
+      currentSlot.innerHTML = "";
 
-      const previousScripts = document.querySelectorAll(
+      const oldScripts = document.querySelectorAll(
         `script[data-ad-position="${position}"]`
       );
 
-      previousScripts.forEach((script) => {
+      oldScripts.forEach((script) => {
         script.remove();
       });
 
@@ -79,10 +73,10 @@ export function AdSlot({
 
       Array.from(template.content.childNodes).forEach((node) => {
         if (node.nodeName === "SCRIPT") {
-          const oldScript = node as HTMLScriptElement;
+          const originalScript = node as HTMLScriptElement;
           const newScript = document.createElement("script");
 
-          for (const attr of Array.from(oldScript.attributes)) {
+          for (const attr of Array.from(originalScript.attributes)) {
             newScript.setAttribute(attr.name, attr.value);
           }
 
@@ -90,36 +84,36 @@ export function AdSlot({
           newScript.setAttribute("data-ad-route", routeKey);
           newScript.async = true;
 
-          if (oldScript.textContent) {
-            newScript.text = oldScript.textContent;
+          if (originalScript.textContent) {
+            newScript.text = originalScript.textContent;
           }
 
           insertedScripts.push(newScript);
         } else {
-          currentEl.appendChild(node.cloneNode(true));
+          currentSlot.appendChild(node.cloneNode(true));
         }
       });
 
       insertedScripts.forEach((script) => {
-        document.body.appendChild(script);
+        currentSlot.appendChild(script);
       });
-    }, 150);
+    }, 300);
 
     return () => {
-      isCancelled = true;
+      cancelled = true;
       window.clearTimeout(timer);
 
       insertedScripts.forEach((script) => {
         script.remove();
       });
 
-      const currentEl = ref.current;
+      const currentSlot = ref.current;
 
-      if (currentEl) {
-        currentEl.innerHTML = "";
+      if (currentSlot) {
+        currentSlot.innerHTML = "";
       }
     };
-  }, [code, position, routeKey, renderKey]);
+  }, [code, position, routeKey]);
 
   if (!code) return null;
 
@@ -136,7 +130,7 @@ export function AdSlot({
       </p>
 
       <div
-        key={`${position}-${routeKey}-${renderKey}`}
+        key={`${position}-${routeKey}`}
         ref={ref}
         className="flex min-h-[250px] w-full justify-center overflow-visible rounded-md"
       />
