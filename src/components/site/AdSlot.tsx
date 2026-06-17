@@ -10,6 +10,12 @@ interface AdSlotProps {
   minHeight?: number;
 }
 
+declare global {
+  interface Window {
+    adsbygoogle?: unknown[];
+  }
+}
+
 export function AdSlot({
   position,
   label = "Publicidade",
@@ -20,8 +26,8 @@ export function AdSlot({
   const ref = useRef<HTMLDivElement | null>(null);
 
   const routeKey = useMemo(() => {
-    return `${location.pathname}${location.searchStr || ""}${location.hash || ""}`;
-  }, [location.pathname, location.searchStr, location.hash]);
+    return `${location.pathname}${location.searchStr || ""}`;
+  }, [location.pathname, location.searchStr]);
 
   const { data } = useQuery({
     queryKey: ["ad-slot", position],
@@ -68,6 +74,38 @@ export function AdSlot({
       }
     }
 
+    function executeInlineScript(scriptText: string) {
+      try {
+        const script = document.createElement("script");
+        script.type = "text/javascript";
+        script.text = scriptText;
+        script.setAttribute("data-ad-position", position);
+        script.setAttribute("data-ad-route", routeKey);
+
+        insertedScripts.push(script);
+        document.body.appendChild(script);
+      } catch (error) {
+        console.warn("Erro ao executar script inline do anúncio:", error);
+      }
+    }
+
+    function pushAdSense() {
+      try {
+        const currentSlot = ref.current;
+
+        if (!currentSlot) return;
+
+        const hasAdSenseUnit = currentSlot.querySelector(".adsbygoogle");
+
+        if (!hasAdSenseUnit) return;
+
+        window.adsbygoogle = window.adsbygoogle || [];
+        window.adsbygoogle.push({});
+      } catch (error) {
+        console.warn("AdSense não carregou neste bloco:", error);
+      }
+    }
+
     function injectAd() {
       const currentSlot = ref.current;
 
@@ -78,26 +116,28 @@ export function AdSlot({
       const template = document.createElement("template");
       template.innerHTML = code;
 
-      const scripts: HTMLScriptElement[] = [];
+      const externalScripts: HTMLScriptElement[] = [];
+      const inlineScripts: string[] = [];
 
       Array.from(template.content.childNodes).forEach((node) => {
         if (node.nodeName === "SCRIPT") {
           const oldScript = node as HTMLScriptElement;
-          const newScript = document.createElement("script");
 
-          for (const attr of Array.from(oldScript.attributes)) {
-            newScript.setAttribute(attr.name, attr.value);
+          if (oldScript.src) {
+            const newScript = document.createElement("script");
+
+            for (const attr of Array.from(oldScript.attributes)) {
+              newScript.setAttribute(attr.name, attr.value);
+            }
+
+            newScript.setAttribute("data-ad-position", position);
+            newScript.setAttribute("data-ad-route", routeKey);
+            newScript.async = true;
+
+            externalScripts.push(newScript);
+          } else if (oldScript.textContent) {
+            inlineScripts.push(oldScript.textContent);
           }
-
-          newScript.setAttribute("data-ad-position", position);
-          newScript.setAttribute("data-ad-route", routeKey);
-          newScript.async = true;
-
-          if (oldScript.textContent) {
-            newScript.text = oldScript.textContent;
-          }
-
-          scripts.push(newScript);
         } else {
           currentSlot.appendChild(node.cloneNode(true));
         }
@@ -106,16 +146,26 @@ export function AdSlot({
       window.setTimeout(() => {
         if (cancelled) return;
 
-        scripts.forEach((script) => {
+        externalScripts.forEach((script) => {
           insertedScripts.push(script);
           document.body.appendChild(script);
         });
+
+        window.setTimeout(() => {
+          if (cancelled) return;
+
+          inlineScripts.forEach((scriptText) => {
+            executeInlineScript(scriptText);
+          });
+
+          pushAdSense();
+        }, 250);
       }, 150);
     }
 
     const timer = window.setTimeout(() => {
       injectAd();
-    }, 350);
+    }, 300);
 
     return () => {
       cancelled = true;
