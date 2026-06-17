@@ -18,7 +18,10 @@ export const Route = createFileRoute("/categoria/$slug")({
 
   head: ({ params, loaderData }) => {
     const c = loaderData?.category;
-    const title = c?.meta_title || `${c?.name || "Categoria"} — Receitas do Nill`;
+
+    const title =
+      c?.meta_title || `${c?.name || "Categoria"} — Receitas do Nill`;
+
     const desc =
       c?.meta_description ||
       c?.description ||
@@ -93,10 +96,14 @@ function CategoryPage() {
         )}
       </header>
 
-      <AdSlot position="category-top" className="mx-auto max-w-3xl" />
+      <AdSlot
+        position="category-top"
+        className="mx-auto max-w-3xl"
+        minHeight={280}
+      />
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <main>
+      <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_336px]">
+        <main className="min-w-0">
           {data.items.length === 0 ? (
             <p className="py-10 text-center text-muted-foreground">
               Nenhuma receita publicada nesta categoria ainda.
@@ -110,11 +117,14 @@ function CategoryPage() {
           )}
         </main>
 
-        <aside className="lg:sticky lg:top-24 lg:self-start">
-          <AdSlot
-            position="sidebar"
-            className="mx-auto max-w-[320px]"
-          />
+        <aside className="hidden lg:block lg:self-start">
+          <div className="sticky top-24">
+            <AdSlot
+              position="sidebar"
+              className="mx-auto w-full min-w-[300px] max-w-[336px]"
+              minHeight={600}
+            />
+          </div>
         </aside>
       </div>
     </div>
