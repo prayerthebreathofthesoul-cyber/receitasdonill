@@ -1,23 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AdSlotProps {
   position: string;
   label?: string;
   className?: string;
+  minHeight?: number;
 }
 
 export function AdSlot({
   position,
   label = "Publicidade",
   className = "",
+  minHeight = 250,
 }: AdSlotProps) {
   const location = useLocation();
   const ref = useRef<HTMLDivElement | null>(null);
 
-  const routeKey = location.href;
+  const routeKey = useMemo(() => {
+    return `${location.pathname}-${location.searchStr || ""}`;
+  }, [location.pathname, location.searchStr]);
 
   const { data } = useQuery({
     queryKey: ["ad-slot", position],
@@ -39,44 +43,49 @@ export function AdSlot({
         code: ad?.code?.trim() || null,
       };
     },
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchOnMount: true,
     refetchOnWindowFocus: false,
   });
 
   const code = data?.code ?? null;
 
   useEffect(() => {
-    const slotElement = ref.current;
+    const slot = ref.current;
 
-    if (!slotElement || !code) return;
+    if (!slot || !code) return;
 
     let cancelled = false;
     const insertedScripts: HTMLScriptElement[] = [];
 
-    const timer = window.setTimeout(() => {
-      const currentSlot = ref.current;
-
-      if (cancelled || !currentSlot) return;
-
-      currentSlot.innerHTML = "";
-
-      const oldScripts = document.querySelectorAll(
-        `script[data-ad-position="${position}"]`
-      );
-
-      oldScripts.forEach((script) => {
+    function clearSlot() {
+      insertedScripts.forEach((script) => {
         script.remove();
       });
+
+      if (ref.current) {
+        ref.current.innerHTML = "";
+      }
+    }
+
+    function injectAd() {
+      const currentSlot = ref.current;
+
+      if (!currentSlot || cancelled) return;
+
+      currentSlot.innerHTML = "";
 
       const template = document.createElement("template");
       template.innerHTML = code;
 
+      const scripts: HTMLScriptElement[] = [];
+
       Array.from(template.content.childNodes).forEach((node) => {
         if (node.nodeName === "SCRIPT") {
-          const originalScript = node as HTMLScriptElement;
+          const oldScript = node as HTMLScriptElement;
           const newScript = document.createElement("script");
 
-          for (const attr of Array.from(originalScript.attributes)) {
+          for (const attr of Array.from(oldScript.attributes)) {
             newScript.setAttribute(attr.name, attr.value);
           }
 
@@ -84,34 +93,34 @@ export function AdSlot({
           newScript.setAttribute("data-ad-route", routeKey);
           newScript.async = true;
 
-          if (originalScript.textContent) {
-            newScript.text = originalScript.textContent;
+          if (oldScript.textContent) {
+            newScript.text = oldScript.textContent;
           }
 
-          insertedScripts.push(newScript);
+          scripts.push(newScript);
         } else {
           currentSlot.appendChild(node.cloneNode(true));
         }
       });
 
-      insertedScripts.forEach((script) => {
-        currentSlot.appendChild(script);
-      });
-    }, 300);
+      window.setTimeout(() => {
+        if (cancelled) return;
+
+        scripts.forEach((script) => {
+          insertedScripts.push(script);
+          document.body.appendChild(script);
+        });
+      }, 100);
+    }
+
+    const timer = window.setTimeout(() => {
+      injectAd();
+    }, 250);
 
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
-
-      insertedScripts.forEach((script) => {
-        script.remove();
-      });
-
-      const currentSlot = ref.current;
-
-      if (currentSlot) {
-        currentSlot.innerHTML = "";
-      }
+      clearSlot();
     };
   }, [code, position, routeKey]);
 
@@ -121,18 +130,21 @@ export function AdSlot({
     <aside
       role="complementary"
       aria-label={label}
-      className={`my-8 ${className}`}
+      className={`my-8 w-full ${className}`}
       data-ad-position={position}
       data-ad-route={routeKey}
     >
-      <p className="mb-1.5 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/70">
+      <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/70">
         {label}
       </p>
 
       <div
         key={`${position}-${routeKey}`}
         ref={ref}
-        className="flex min-h-[250px] w-full justify-center overflow-visible rounded-md"
+        className="w-full overflow-visible rounded-md"
+        style={{
+          minHeight,
+        }}
       />
     </aside>
   );
