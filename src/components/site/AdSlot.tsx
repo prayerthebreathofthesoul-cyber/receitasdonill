@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AdSlotProps {
@@ -7,33 +8,54 @@ interface AdSlotProps {
   className?: string;
 }
 
-/**
- * AdSlot — espaço seguro para anúncios.
- * - Mostra placeholder estilizado "Publicidade" até que um Publisher ID do
- *   AdSense seja configurado em /admin/anuncios.
- * - Quando o Publisher ID estiver salvo em settings.adsense.publisher_id E
- *   houver um ad ativo cadastrado para esta posição com `code`, renderiza
- *   o HTML do anúncio injetado.
- * - Posições recomendadas: home-after-hero, home-mid, article-after-intro,
- *   article-mid, article-before-related, sidebar.
- */
 export function AdSlot({ position, label = "Publicidade", className = "" }: AdSlotProps) {
   const { data } = useQuery({
     queryKey: ["ad-slot", position],
     queryFn: async () => {
-      const [{ data: ad }, { data: setting }] = await Promise.all([
-        supabase.from("ads").select("code").eq("position", position).eq("is_active", true).maybeSingle(),
-        supabase.from("settings").select("value").eq("key", "adsense").maybeSingle(),
-      ]);
-      const publisherId = (setting?.value as { publisher_id?: string } | null)?.publisher_id;
-      return { code: ad?.code ?? null, publisherId: publisherId ?? null };
+      const { data: ad } = await supabase
+        .from("ads")
+        .select("code")
+        .eq("position", position)
+        .eq("is_active", true)
+        .maybeSingle();
+      return { code: ad?.code ?? null };
     },
     staleTime: 60_000,
   });
 
-  // Renderiza o anúncio sempre que houver `code` cadastrado para a posição.
-  // O publisher_id do AdSense é opcional (não é exigido para AdsTerra, banners diretos, etc.).
-  const showReal = !!data?.code;
+  const ref = useRef<HTMLDivElement>(null);
+  const code = data?.code ?? null;
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !code) return;
+
+    // Limpa antes de re-injetar (necessário p/ scripts de anúncio executarem)
+    el.innerHTML = "";
+
+    // Faz parse do HTML do anúncio e re-cria <script> manualmente,
+    // pois innerHTML não executa scripts inseridos dinamicamente.
+    const template = document.createElement("template");
+    template.innerHTML = code.trim();
+
+    const nodes = Array.from(template.content.childNodes);
+    nodes.forEach((node) => {
+      if (node.nodeName === "SCRIPT") {
+        const old = node as HTMLScriptElement;
+        const s = document.createElement("script");
+        // copia atributos (src, type, async, data-*)
+        for (const attr of Array.from(old.attributes)) {
+          s.setAttribute(attr.name, attr.value);
+        }
+        if (old.textContent) s.text = old.textContent;
+        el.appendChild(s);
+      } else {
+        el.appendChild(node.cloneNode(true));
+      }
+    });
+  }, [code]);
+
+  const showReal = !!code;
 
   return (
     <aside
@@ -46,7 +68,7 @@ export function AdSlot({ position, label = "Publicidade", className = "" }: AdSl
         {label}
       </p>
       {showReal ? (
-        <div className="overflow-hidden rounded-md" dangerouslySetInnerHTML={{ __html: data.code! }} />
+        <div ref={ref} className="overflow-hidden rounded-md flex justify-center" />
       ) : (
         <div className="ds-ad-slot">Espaço reservado para anúncio</div>
       )}
