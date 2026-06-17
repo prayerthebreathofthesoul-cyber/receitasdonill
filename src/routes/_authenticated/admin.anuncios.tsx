@@ -13,6 +13,7 @@ export const Route = createFileRoute("/_authenticated/admin/anuncios")({
 const POSITIONS = [
   "home-after-hero",
   "home-mid",
+  "home-before-footer",
   "category-top",
   "article-after-intro",
   "article-mid",
@@ -71,7 +72,7 @@ function AdsPage() {
         behavior: "smooth",
         block: "start",
       });
-    }, 50);
+    }, 80);
   }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -110,8 +111,8 @@ function AdsPage() {
 
       resetForm();
 
-      qc.invalidateQueries({ queryKey: ["admin-ads"] });
-      qc.invalidateQueries({ queryKey: ["ad-slot"] });
+      await qc.invalidateQueries({ queryKey: ["admin-ads"] });
+      await qc.invalidateQueries({ queryKey: ["ad-slot"] });
     } catch (err: any) {
       toast.error(err.message || "Erro ao salvar o bloco de anúncio.");
     }
@@ -133,8 +134,8 @@ function AdsPage() {
         resetForm();
       }
 
-      qc.invalidateQueries({ queryKey: ["admin-ads"] });
-      qc.invalidateQueries({ queryKey: ["ad-slot"] });
+      await qc.invalidateQueries({ queryKey: ["admin-ads"] });
+      await qc.invalidateQueries({ queryKey: ["ad-slot"] });
     } catch (err: any) {
       toast.error(err.message || "Erro ao excluir o bloco de anúncio.");
     }
@@ -241,7 +242,7 @@ function AdsPage() {
             </select>
           </div>
 
-          <div className="flex gap-2 sm:justify-end">
+          <div className="flex flex-wrap gap-2 sm:justify-end">
             {isEditing && (
               <button
                 type="button"
@@ -272,7 +273,7 @@ function AdsPage() {
           </div>
         </form>
 
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 space-y-3">
           {isLoading && (
             <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
               Carregando blocos de anúncio...
@@ -288,9 +289,9 @@ function AdsPage() {
           {ads?.map((a: any) => (
             <div
               key={a.id}
-              className="flex items-center justify-between rounded-lg border border-border bg-card p-4"
+              className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
             >
-              <div>
+              <div className="min-w-0">
                 <p className="font-semibold">
                   {a.name}{" "}
                   <span className="text-xs text-muted-foreground">
@@ -303,11 +304,11 @@ function AdsPage() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => handleEdit(a)}
-                  className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/10"
+                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-primary bg-primary/10 px-3 text-sm font-semibold text-primary hover:bg-primary hover:text-primary-foreground"
                   title="Editar bloco"
                 >
                   <Pencil className="h-4 w-4" />
@@ -317,7 +318,7 @@ function AdsPage() {
                 <button
                   type="button"
                   onClick={() => handleDelete(a)}
-                  className="rounded-md p-2 text-destructive hover:bg-destructive/10"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground"
                   title="Excluir bloco"
                 >
                   <Trash2 className="h-4 w-4" />
