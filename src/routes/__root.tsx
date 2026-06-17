@@ -75,6 +75,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:locale", content: "pt_BR" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "theme-color", content: "#C2410C" },
+      { property: "og:title", content: "Receitas do Nill — Receitas caseiras, sobremesas e dicas práticas" },
+      { name: "twitter:title", content: "Receitas do Nill — Receitas caseiras, sobremesas e dicas práticas" },
+      { property: "og:description", content: "Receitas testadas, passo a passo claro e fotos reais. Aprenda a preparar sobremesas, pratos principais, massas, lanches e bebidas no Receitas do Nill." },
+      { name: "twitter:description", content: "Receitas testadas, passo a passo claro e fotos reais. Aprenda a preparar sobremesas, pratos principais, massas, lanches e bebidas no Receitas do Nill." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0739214f-da76-4eb3-b03d-ba260f77ac09/id-preview-391e7b99--9bef8ad5-b98c-4e86-93d5-15b02f8f2952.lovable.app-1781655929209.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0739214f-da76-4eb3-b03d-ba260f77ac09/id-preview-391e7b99--9bef8ad5-b98c-4e86-93d5-15b02f8f2952.lovable.app-1781655929209.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
