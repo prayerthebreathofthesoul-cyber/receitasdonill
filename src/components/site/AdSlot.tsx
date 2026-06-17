@@ -12,12 +12,17 @@ export function AdSlot({ position, label = "Publicidade", className = "" }: AdSl
   const { data } = useQuery({
     queryKey: ["ad-slot", position],
     queryFn: async () => {
-      const { data: ad } = await supabase
+      const { data: ads, error } = await supabase
         .from("ads")
         .select("code")
         .eq("position", position)
         .eq("is_active", true)
-        .maybeSingle();
+        .not("code", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+      const ad = ads?.find((item) => item.code?.trim());
       return { code: ad?.code ?? null };
     },
     staleTime: 60_000,
@@ -39,8 +44,13 @@ export function AdSlot({ position, label = "Publicidade", className = "" }: AdSl
     template.innerHTML = code.trim();
 
     const nodes = Array.from(template.content.childNodes);
-    nodes.forEach((node) => {
-      if (node.nodeName === "SCRIPT") {
+    nodes
+      .filter((node) => node.nodeName !== "SCRIPT")
+      .forEach((node) => el.appendChild(node.cloneNode(true)));
+
+    nodes
+      .filter((node) => node.nodeName === "SCRIPT")
+      .forEach((node) => {
         const old = node as HTMLScriptElement;
         const s = document.createElement("script");
         // copia atributos (src, type, async, data-*)
@@ -49,10 +59,7 @@ export function AdSlot({ position, label = "Publicidade", className = "" }: AdSl
         }
         if (old.textContent) s.text = old.textContent;
         el.appendChild(s);
-      } else {
-        el.appendChild(node.cloneNode(true));
-      }
-    });
+      });
   }, [code]);
 
   const showReal = !!code;
@@ -68,9 +75,9 @@ export function AdSlot({ position, label = "Publicidade", className = "" }: AdSl
         {label}
       </p>
       {showReal ? (
-        <div ref={ref} className="overflow-hidden rounded-md flex justify-center" />
+        <div ref={ref} className="flex min-h-[90px] justify-center overflow-hidden rounded-md" />
       ) : (
-        <div className="ds-ad-slot">Espaço reservado para anúncio</div>
+        null
       )}
     </aside>
   );
