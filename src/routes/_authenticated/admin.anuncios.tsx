@@ -1,12 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  adminListAds,
-  upsertAd,
-  deleteAd,
-} from "@/lib/admin.functions";
-import { useState } from "react";
+import { adminListAds, upsertAd, deleteAd } from "@/lib/admin.functions";
+import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Trash2, Plus, Pencil, Save, X } from "lucide-react";
 
@@ -53,6 +49,7 @@ function AdsPage() {
   });
 
   const [form, setForm] = useState<AdForm>(emptyForm);
+
   const isEditing = Boolean(form.id);
 
   function resetForm() {
@@ -77,7 +74,7 @@ function AdsPage() {
     }, 50);
   }
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     const payload: AdForm = {
@@ -145,7 +142,9 @@ function AdsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-3xl font-bold">Anúncios Adsterra</h1>
+      <h1 className="font-display text-3xl font-bold">
+        Anúncios Adsterra
+      </h1>
 
       <section className="mt-6">
         <h2 className="font-display text-xl font-bold">
@@ -163,8 +162,7 @@ function AdsPage() {
         >
           {isEditing && (
             <div className="sm:col-span-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-primary">
-              Editando bloco:{" "}
-              <strong>{form.name || "Bloco de anúncio"}</strong>
+              Editando bloco: <strong>{form.name}</strong>
             </div>
           )}
 
@@ -255,7 +253,10 @@ function AdsPage() {
               </button>
             )}
 
-            <button className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+            <button
+              type="submit"
+              className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+            >
               {isEditing ? (
                 <>
                   <Save className="h-4 w-4" />
@@ -287,55 +288,41 @@ function AdsPage() {
           {ads?.map((a: any) => (
             <div
               key={a.id}
-              className="rounded-lg border border-border bg-card p-4"
+              className="flex items-center justify-between rounded-lg border border-border bg-card p-4"
             >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="font-semibold">
-                    {a.name}{" "}
-                    <span className="text-xs text-muted-foreground">
-                      [{a.position}]
-                    </span>
-                  </p>
+              <div>
+                <p className="font-semibold">
+                  {a.name}{" "}
+                  <span className="text-xs text-muted-foreground">
+                    [{a.position}]
+                  </span>
+                </p>
 
-                  <p className="text-xs text-muted-foreground">
-                    {a.is_active ? "Ativo" : "Inativo"} · {a.device || "all"}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => handleEdit(a)}
-                    className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/10"
-                    title="Editar bloco"
-                  >
-                    <Pencil className="h-4 w-4" />
-                    Editar
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(a)}
-                    className="rounded-md p-2 text-destructive hover:bg-destructive/10"
-                    title="Excluir bloco"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  {a.is_active ? "Ativo" : "Inativo"} · {a.device || "all"}
+                </p>
               </div>
 
-              {a.code && (
-                <details className="mt-3">
-                  <summary className="cursor-pointer text-xs font-semibold text-muted-foreground hover:text-foreground">
-                    Ver código cadastrado
-                  </summary>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleEdit(a)}
+                  className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/10"
+                  title="Editar bloco"
+                >
+                  <Pencil className="h-4 w-4" />
+                  Editar
+                </button>
 
-                  <pre className="mt-2 max-h-40 overflow-auto rounded-md bg-muted p-3 text-xs text-muted-foreground">
-                    {a.code}
-                  </pre>
-                </details>
-              )}
+                <button
+                  type="button"
+                  onClick={() => handleDelete(a)}
+                  className="rounded-md p-2 text-destructive hover:bg-destructive/10"
+                  title="Excluir bloco"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           ))}
         </div>
