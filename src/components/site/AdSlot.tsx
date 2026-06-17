@@ -8,7 +8,13 @@ interface AdSlotProps {
   className?: string;
 }
 
-export function AdSlot({ position, label = "Publicidade", className = "" }: AdSlotProps) {
+export function AdSlot({
+  position,
+  label = "Publicidade",
+  className = "",
+}: AdSlotProps) {
+  const ref = useRef<HTMLDivElement>(null);
+
   const { data } = useQuery({
     queryKey: ["ad-slot", position],
     queryFn: async () => {
@@ -22,47 +28,75 @@ export function AdSlot({ position, label = "Publicidade", className = "" }: AdSl
         .limit(1);
 
       if (error) throw error;
+
       const ad = ads?.find((item) => item.code?.trim());
-      return { code: ad?.code ?? null };
+
+      return {
+        code: ad?.code?.trim() || null,
+      };
     },
     staleTime: 60_000,
   });
 
-  const ref = useRef<HTMLDivElement>(null);
   const code = data?.code ?? null;
 
   useEffect(() => {
     const el = ref.current;
+
     if (!el || !code) return;
 
-    // Limpa antes de re-injetar (necessário p/ scripts de anúncio executarem)
     el.innerHTML = "";
 
-    // Faz parse do HTML do anúncio e re-cria <script> manualmente,
-    // pois innerHTML não executa scripts inseridos dinamicamente.
+    const previousScripts = document.querySelectorAll(
+      `script[data-ad-position="${position}"]`
+    );
+
+    previousScripts.forEach((script) => {
+      script.remove();
+    });
+
     const template = document.createElement("template");
-    template.innerHTML = code.trim();
+    template.innerHTML = code;
 
-    const nodes = Array.from(template.content.childNodes);
-    nodes
-      .filter((node) => node.nodeName !== "SCRIPT")
-      .forEach((node) => el.appendChild(node.cloneNode(true)));
+    const scripts: HTMLScriptElement[] = [];
 
-    nodes
-      .filter((node) => node.nodeName === "SCRIPT")
-      .forEach((node) => {
-        const old = node as HTMLScriptElement;
-        const s = document.createElement("script");
-        // copia atributos (src, type, async, data-*)
-        for (const attr of Array.from(old.attributes)) {
-          s.setAttribute(attr.name, attr.value);
+    Array.from(template.content.childNodes).forEach((node) => {
+      if (node.nodeName === "SCRIPT") {
+        const oldScript = node as HTMLScriptElement;
+        const newScript = document.createElement("script");
+
+        for (const attr of Array.from(oldScript.attributes)) {
+          newScript.setAttribute(attr.name, attr.value);
         }
-        if (old.textContent) s.text = old.textContent;
-        el.appendChild(s);
-      });
-  }, [code]);
 
-  const showReal = !!code;
+        newScript.setAttribute("data-ad-position", position);
+
+        if (oldScript.textContent) {
+          newScript.text = oldScript.textContent;
+        }
+
+        scripts.push(newScript);
+      } else {
+        el.appendChild(node.cloneNode(true));
+      }
+    });
+
+    scripts.forEach((script) => {
+      document.body.appendChild(script);
+    });
+
+    return () => {
+      scripts.forEach((script) => {
+        script.remove();
+      });
+
+      if (el) {
+        el.innerHTML = "";
+      }
+    };
+  }, [code, position]);
+
+  if (!code) return null;
 
   return (
     <aside
@@ -74,11 +108,11 @@ export function AdSlot({ position, label = "Publicidade", className = "" }: AdSl
       <p className="mb-1.5 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/70">
         {label}
       </p>
-      {showReal ? (
-        <div ref={ref} className="flex min-h-[90px] justify-center overflow-hidden rounded-md" />
-      ) : (
-        null
-      )}
+
+      <div
+        ref={ref}
+        className="flex min-h-[250px] w-full justify-center overflow-visible rounded-md"
+      />
     </aside>
   );
 }
