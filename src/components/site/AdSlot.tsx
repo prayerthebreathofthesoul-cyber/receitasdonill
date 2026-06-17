@@ -31,7 +31,9 @@ export function AdSlot({ position, label = "Publicidade", className = "" }: AdSl
     staleTime: 60_000,
   });
 
-  const showReal = data?.code && data?.publisherId;
+  // Renderiza o anúncio sempre que houver `code` cadastrado para a posição.
+  // O publisher_id do AdSense é opcional (não é exigido para AdsTerra, banners diretos, etc.).
+  const showReal = !!data?.code;
 
   return (
     <aside
