@@ -164,145 +164,156 @@ function RecipePage() {
   const relatedRecipes = related || [];
 
   return (
-    <article className="mx-auto max-w-3xl px-4 py-8">
-      <nav
-        className="mb-6 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground"
-        aria-label="Breadcrumb"
-      >
-        <Link
-          to="/"
-          className="inline-flex items-center gap-1 hover:text-primary"
+    <div className="mx-auto grid max-w-7xl gap-10 px-4 py-8 lg:grid-cols-[minmax(0,760px)_336px] lg:items-start">
+      <article className="min-w-0">
+        <nav
+          className="mb-6 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground"
+          aria-label="Breadcrumb"
         >
-          <HomeIcon className="h-3 w-3" />
-          Home
-        </Link>
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1 hover:text-primary"
+          >
+            <HomeIcon className="h-3 w-3" />
+            Home
+          </Link>
 
-        <ChevronRight className="h-3 w-3" />
+          <ChevronRight className="h-3 w-3" />
+
+          {r.category && (
+            <>
+              <Link
+                to="/categoria/$slug"
+                params={{ slug: r.category.slug }}
+                className="hover:text-primary"
+              >
+                {r.category.name}
+              </Link>
+
+              <ChevronRight className="h-3 w-3" />
+            </>
+          )}
+
+          <span className="text-foreground">{r.title}</span>
+        </nav>
 
         {r.category && (
-          <>
-            <Link
-              to="/categoria/$slug"
-              params={{ slug: r.category.slug }}
-              className="hover:text-primary"
-            >
-              {r.category.name}
-            </Link>
-
-            <ChevronRight className="h-3 w-3" />
-          </>
+          <Link
+            to="/categoria/$slug"
+            params={{ slug: r.category.slug }}
+            className="ds-eyebrow inline-flex items-center gap-1.5 hover:underline"
+          >
+            <Tag className="h-3 w-3" />
+            {r.category.name}
+          </Link>
         )}
 
-        <span className="text-foreground">{r.title}</span>
-      </nav>
+        <h1 className="mt-3 font-display text-4xl font-bold leading-tight md:text-5xl">
+          {r.title}
+        </h1>
 
-      {r.category && (
-        <Link
-          to="/categoria/$slug"
-          params={{ slug: r.category.slug }}
-          className="ds-eyebrow inline-flex items-center gap-1.5 hover:underline"
-        >
-          <Tag className="h-3 w-3" />
-          {r.category.name}
-        </Link>
-      )}
-
-      <h1 className="mt-3 font-display text-4xl font-bold leading-tight md:text-5xl">
-        {r.title}
-      </h1>
-
-      {r.subtitle && (
-        <p className="mt-3 text-lg text-muted-foreground">{r.subtitle}</p>
-      )}
-
-      <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
-        {r.author_name && (
-          <span className="inline-flex items-center gap-1.5">
-            <User className="h-4 w-4" />
-            {r.author_name}
-          </span>
+        {r.subtitle && (
+          <p className="mt-3 text-lg text-muted-foreground">{r.subtitle}</p>
         )}
 
-        {r.reading_time && (
-          <span className="inline-flex items-center gap-1.5">
-            <Clock className="h-4 w-4" />
-            {r.reading_time} min de leitura
-          </span>
-        )}
-
-        {r.published_at && (
-          <time dateTime={r.published_at}>
-            {new Date(r.published_at).toLocaleDateString("pt-BR")}
-          </time>
-        )}
-      </div>
-
-      {r.featured_image && (
-        <figure className="mt-7 overflow-hidden rounded-lg">
-          <img
-            src={r.featured_image}
-            alt={r.featured_image_alt || r.title}
-            className="aspect-[16/10] w-full object-cover"
-          />
-        </figure>
-      )}
-
-      <AdSlot position="article-after-intro" />
-
-      <div
-        className="ds-prose mt-6"
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
-
-      <AdSlot position="article-mid" />
-
-      {images.length > 0 && (
-        <div className="mt-10 grid gap-4 sm:grid-cols-2">
-          {images.map((img) => (
-            <figure key={img.file_url} className="overflow-hidden rounded-lg">
-              <img
-                src={img.file_url}
-                alt={img.alt_text || r.title}
-                loading="lazy"
-                className="aspect-[4/3] w-full object-cover"
-              />
-
-              {img.caption && (
-                <figcaption className="mt-2 text-center text-xs italic text-muted-foreground">
-                  {img.caption}
-                </figcaption>
-              )}
-            </figure>
-          ))}
-        </div>
-      )}
-
-      {tags.length > 0 && (
-        <div className="mt-8 flex flex-wrap gap-2">
-          {tags.map((t) => (
-            <span
-              key={t}
-              className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground"
-            >
-              #{t}
+        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
+          {r.author_name && (
+            <span className="inline-flex items-center gap-1.5">
+              <User className="h-4 w-4" />
+              {r.author_name}
             </span>
-          ))}
+          )}
+
+          {r.reading_time && (
+            <span className="inline-flex items-center gap-1.5">
+              <Clock className="h-4 w-4" />
+              {r.reading_time} min de leitura
+            </span>
+          )}
+
+          {r.published_at && (
+            <time dateTime={r.published_at}>
+              {new Date(r.published_at).toLocaleDateString("pt-BR")}
+            </time>
+          )}
         </div>
-      )}
 
-      <AdSlot position="article-before-related" />
+        {r.featured_image && (
+          <figure className="mt-7 overflow-hidden rounded-lg">
+            <img
+              src={r.featured_image}
+              alt={r.featured_image_alt || r.title}
+              className="aspect-[16/10] w-full object-cover"
+            />
+          </figure>
+        )}
 
-      {relatedRecipes.length > 0 && (
-        <section className="mt-14">
-          <h2 className="ds-section-title mb-6">Receitas relacionadas</h2>
+        <AdSlot position="article-after-intro" />
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {relatedRecipes.map((rel) => (
-              <RecipeCard key={rel.slug} recipe={rel} />
+        <div
+          className="ds-prose mt-6"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+
+        <AdSlot position="article-mid" />
+
+        {images.length > 0 && (
+          <div className="mt-10 grid gap-4 sm:grid-cols-2">
+            {images.map((img) => (
+              <figure key={img.file_url} className="overflow-hidden rounded-lg">
+                <img
+                  src={img.file_url}
+                  alt={img.alt_text || r.title}
+                  loading="lazy"
+                  className="aspect-[4/3] w-full object-cover"
+                />
+
+                {img.caption && (
+                  <figcaption className="mt-2 text-center text-xs italic text-muted-foreground">
+                    {img.caption}
+                  </figcaption>
+                )}
+              </figure>
             ))}
           </div>
-        </section>
-      )}
-    </article>
+        )}
+
+        {tags.length > 0 && (
+          <div className="mt-8 flex flex-wrap gap-2">
+            {tags.map((t) => (
+              <span
+                key={t}
+                className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground"
+              >
+                #{t}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <AdSlot position="article-before-related" />
+
+        {relatedRecipes.length > 0 && (
+          <section className="mt-14">
+            <h2 className="ds-section-title mb-6">Receitas relacionadas</h2>
+
+            <div className="grid gap-6 sm:grid-cols-2">
+              {relatedRecipes.map((rel) => (
+                <RecipeCard key={rel.slug} recipe={rel} />
+              ))}
+            </div>
+          </section>
+        )}
+      </article>
+
+      <aside className="hidden lg:block lg:self-start">
+        <div className="sticky top-24">
+          <AdSlot
+            position="sidebar"
+            className="mx-auto w-full min-w-[300px] max-w-[336px]"
+          />
+        </div>
+      </aside>
+    </div>
   );
 }
