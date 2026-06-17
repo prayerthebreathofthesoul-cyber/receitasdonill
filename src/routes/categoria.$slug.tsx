@@ -57,7 +57,7 @@ function CategoryPage() {
         <h1 className="mt-2 font-display text-4xl font-bold md:text-5xl">{c.name}</h1>
         {c.description && <p className="mt-3 text-base text-muted-foreground">{c.description}</p>}
       </header>
-      <AdSlot position="category-top" className="mx-auto max-w-3xl" />
+      <AdSlot position="sidebar" className="mx-auto max-w-3xl" />
       {data.items.length === 0 ? (
         <p className="py-10 text-center text-muted-foreground">Nenhuma receita publicada nesta categoria ainda.</p>
       ) : (
