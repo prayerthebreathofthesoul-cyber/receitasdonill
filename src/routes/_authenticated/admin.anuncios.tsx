@@ -335,5 +335,6 @@ function AdsPage() {
 const inputCls =
   "h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring";
 
+
 const textareaCls =
   "w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs outline-none focus:ring-2 focus:ring-ring sm:col-span-2";
