@@ -44,8 +44,13 @@ export function AdSlot({ position, label = "Publicidade", className = "" }: AdSl
     template.innerHTML = code.trim();
 
     const nodes = Array.from(template.content.childNodes);
-    nodes.forEach((node) => {
-      if (node.nodeName === "SCRIPT") {
+    nodes
+      .filter((node) => node.nodeName !== "SCRIPT")
+      .forEach((node) => el.appendChild(node.cloneNode(true)));
+
+    nodes
+      .filter((node) => node.nodeName === "SCRIPT")
+      .forEach((node) => {
         const old = node as HTMLScriptElement;
         const s = document.createElement("script");
         // copia atributos (src, type, async, data-*)
@@ -54,10 +59,7 @@ export function AdSlot({ position, label = "Publicidade", className = "" }: AdSl
         }
         if (old.textContent) s.text = old.textContent;
         el.appendChild(s);
-      } else {
-        el.appendChild(node.cloneNode(true));
-      }
-    });
+      });
   }, [code]);
 
   const showReal = !!code;
