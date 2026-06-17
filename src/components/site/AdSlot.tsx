@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useLocation } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AdSlotProps {
@@ -13,7 +14,13 @@ export function AdSlot({
   label = "Publicidade",
   className = "",
 }: AdSlotProps) {
+  const location = useLocation();
   const ref = useRef<HTMLDivElement>(null);
+  const [renderKey, setRenderKey] = useState(0);
+
+  const routeKey = useMemo(() => {
+    return `${location.pathname}-${location.searchStr || ""}`;
+  }, [location.pathname, location.searchStr]);
 
   const { data } = useQuery({
     queryKey: ["ad-slot", position],
@@ -41,60 +48,78 @@ export function AdSlot({
   const code = data?.code ?? null;
 
   useEffect(() => {
+    setRenderKey((current) => current + 1);
+  }, [routeKey, position]);
+
+  useEffect(() => {
     const el = ref.current;
 
     if (!el || !code) return;
 
-    el.innerHTML = "";
+    let isCancelled = false;
+    const insertedScripts: HTMLScriptElement[] = [];
 
-    const previousScripts = document.querySelectorAll(
-      `script[data-ad-position="${position}"]`
-    );
+    const timer = window.setTimeout(() => {
+      if (isCancelled || !ref.current) return;
 
-    previousScripts.forEach((script) => {
-      script.remove();
-    });
+      const currentEl = ref.current;
 
-    const template = document.createElement("template");
-    template.innerHTML = code;
+      currentEl.innerHTML = "";
 
-    const scripts: HTMLScriptElement[] = [];
+      const previousScripts = document.querySelectorAll(
+        `script[data-ad-position="${position}"]`
+      );
 
-    Array.from(template.content.childNodes).forEach((node) => {
-      if (node.nodeName === "SCRIPT") {
-        const oldScript = node as HTMLScriptElement;
-        const newScript = document.createElement("script");
-
-        for (const attr of Array.from(oldScript.attributes)) {
-          newScript.setAttribute(attr.name, attr.value);
-        }
-
-        newScript.setAttribute("data-ad-position", position);
-
-        if (oldScript.textContent) {
-          newScript.text = oldScript.textContent;
-        }
-
-        scripts.push(newScript);
-      } else {
-        el.appendChild(node.cloneNode(true));
-      }
-    });
-
-    scripts.forEach((script) => {
-      document.body.appendChild(script);
-    });
-
-    return () => {
-      scripts.forEach((script) => {
+      previousScripts.forEach((script) => {
         script.remove();
       });
 
-      if (el) {
-        el.innerHTML = "";
+      const template = document.createElement("template");
+      template.innerHTML = code;
+
+      Array.from(template.content.childNodes).forEach((node) => {
+        if (node.nodeName === "SCRIPT") {
+          const oldScript = node as HTMLScriptElement;
+          const newScript = document.createElement("script");
+
+          for (const attr of Array.from(oldScript.attributes)) {
+            newScript.setAttribute(attr.name, attr.value);
+          }
+
+          newScript.setAttribute("data-ad-position", position);
+          newScript.setAttribute("data-ad-route", routeKey);
+          newScript.async = true;
+
+          if (oldScript.textContent) {
+            newScript.text = oldScript.textContent;
+          }
+
+          insertedScripts.push(newScript);
+        } else {
+          currentEl.appendChild(node.cloneNode(true));
+        }
+      });
+
+      insertedScripts.forEach((script) => {
+        document.body.appendChild(script);
+      });
+    }, 150);
+
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(timer);
+
+      insertedScripts.forEach((script) => {
+        script.remove();
+      });
+
+      const currentEl = ref.current;
+
+      if (currentEl) {
+        currentEl.innerHTML = "";
       }
     };
-  }, [code, position]);
+  }, [code, position, routeKey, renderKey]);
 
   if (!code) return null;
 
@@ -104,12 +129,14 @@ export function AdSlot({
       aria-label={label}
       className={`my-8 ${className}`}
       data-ad-position={position}
+      data-ad-route={routeKey}
     >
       <p className="mb-1.5 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/70">
         {label}
       </p>
 
       <div
+        key={`${position}-${routeKey}-${renderKey}`}
         ref={ref}
         className="flex min-h-[250px] w-full justify-center overflow-visible rounded-md"
       />
