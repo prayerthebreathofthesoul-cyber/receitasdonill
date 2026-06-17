@@ -20,8 +20,8 @@ export function AdSlot({
   const ref = useRef<HTMLDivElement | null>(null);
 
   const routeKey = useMemo(() => {
-    return `${location.pathname}-${location.searchStr || ""}`;
-  }, [location.pathname, location.searchStr]);
+    return `${location.pathname}${location.searchStr || ""}${location.hash || ""}`;
+  }, [location.pathname, location.searchStr, location.hash]);
 
   const { data } = useQuery({
     queryKey: ["ad-slot", position],
@@ -110,12 +110,12 @@ export function AdSlot({
           insertedScripts.push(script);
           document.body.appendChild(script);
         });
-      }, 100);
+      }, 150);
     }
 
     const timer = window.setTimeout(() => {
       injectAd();
-    }, 250);
+    }, 350);
 
     return () => {
       cancelled = true;
