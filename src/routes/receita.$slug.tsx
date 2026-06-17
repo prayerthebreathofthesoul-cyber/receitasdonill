@@ -87,7 +87,7 @@ function RecipePage() {
   });
   if (!data) return null;
   const { recipe: r, related } = data;
-  const html = marked.parse(r.content || "") as string;
+  const html = DOMPurify.sanitize(marked.parse(r.content || "") as string);
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-8">
