@@ -1,6 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { marked } from "marked";
+import DOMPurify from "isomorphic-dompurify";
 import { getRecipeBySlug } from "@/lib/recipes.functions";
 import { RecipeCard } from "@/components/site/RecipeCard";
 import { AdSlot } from "@/components/site/AdSlot";
