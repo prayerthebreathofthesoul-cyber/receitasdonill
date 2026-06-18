@@ -16,6 +16,16 @@ declare global {
   }
 }
 
+type ScriptInfo = {
+  src: string | null;
+  text: string;
+  attrs: Array<{
+    name: string;
+    value: string;
+  }>;
+  hasAsync: boolean;
+};
+
 export function AdSlot({
   position,
   label = "Publicidade",
@@ -64,6 +74,14 @@ export function AdSlot({
     let cancelled = false;
     const insertedScripts: HTMLScriptElement[] = [];
 
+    function normalizeScriptUrl(src: string) {
+      if (src.startsWith("//")) {
+        return `${window.location.protocol}${src}`;
+      }
+
+      return src;
+    }
+
     function clearSlot() {
       insertedScripts.forEach((script) => {
         script.remove();
@@ -74,33 +92,69 @@ export function AdSlot({
       }
     }
 
-    function executeInlineScript(scriptText: string) {
-      try {
-        const script = document.createElement("script");
-        script.type = "text/javascript";
-        script.text = scriptText;
-        script.setAttribute("data-ad-position", position);
-        script.setAttribute("data-ad-route", routeKey);
+    function collectScripts(template: HTMLTemplateElement): ScriptInfo[] {
+      const scriptElements = Array.from(
+        template.content.querySelectorAll("script"),
+      );
 
-        insertedScripts.push(script);
-        document.body.appendChild(script);
-      } catch (error) {
-        console.warn("Erro ao executar script inline do anúncio:", error);
-      }
+      return scriptElements.map((oldScript) => {
+        const info: ScriptInfo = {
+          src: oldScript.getAttribute("src"),
+          text: oldScript.textContent || "",
+          attrs: Array.from(oldScript.attributes).map((attr) => ({
+            name: attr.name,
+            value: attr.value,
+          })),
+          hasAsync: oldScript.hasAttribute("async"),
+        };
+
+        oldScript.remove();
+
+        return info;
+      });
     }
 
-    function pushAdSense() {
+    function createScript(scriptInfo: ScriptInfo) {
+      const script = document.createElement("script");
+
+      scriptInfo.attrs.forEach((attr) => {
+        if (attr.name === "src") return;
+        if (attr.name === "async") return;
+
+        script.setAttribute(attr.name, attr.value);
+      });
+
+      script.setAttribute("data-ad-position", position);
+      script.setAttribute("data-ad-route", routeKey);
+
+      if (scriptInfo.src) {
+        script.async = scriptInfo.hasAsync;
+        script.src = normalizeScriptUrl(scriptInfo.src);
+      } else {
+        script.text = scriptInfo.text;
+      }
+
+      return script;
+    }
+
+    function pushAdSenseIfNeeded() {
       try {
         const currentSlot = ref.current;
 
         if (!currentSlot) return;
 
-        const hasAdSenseUnit = currentSlot.querySelector(".adsbygoogle");
+        const adSenseUnits = currentSlot.querySelectorAll(".adsbygoogle");
 
-        if (!hasAdSenseUnit) return;
+        if (!adSenseUnits.length) return;
 
-        window.adsbygoogle = window.adsbygoogle || [];
-        window.adsbygoogle.push({});
+        adSenseUnits.forEach((unit) => {
+          const status = unit.getAttribute("data-adsbygoogle-status");
+
+          if (!status) {
+            window.adsbygoogle = window.adsbygoogle || [];
+            window.adsbygoogle.push({});
+          }
+        });
       } catch (error) {
         console.warn("AdSense não carregou neste bloco:", error);
       }
@@ -116,51 +170,48 @@ export function AdSlot({
       const template = document.createElement("template");
       template.innerHTML = code;
 
-      const externalScripts: HTMLScriptElement[] = [];
-      const inlineScripts: string[] = [];
+      const scripts = collectScripts(template);
 
-      Array.from(template.content.childNodes).forEach((node) => {
-        if (node.nodeName === "SCRIPT") {
-          const oldScript = node as HTMLScriptElement;
+      /**
+       * Primeiro colocamos o HTML do anúncio dentro do bloco.
+       * Isso é importante para Native Banner da Adsterra, que usa:
+       * <div id="container-xxxx"></div>
+       */
+      currentSlot.appendChild(template.content.cloneNode(true));
 
-          if (oldScript.src) {
-            const newScript = document.createElement("script");
+      const inlineScripts = scripts.filter((script) => !script.src);
+      const externalScripts = scripts.filter((script) => script.src);
 
-            for (const attr of Array.from(oldScript.attributes)) {
-              newScript.setAttribute(attr.name, attr.value);
-            }
+      /**
+       * Depois executamos scripts inline.
+       * Isso é essencial para Banner da Adsterra, porque o atOptions
+       * precisa existir antes do invoke.js.
+       */
+      inlineScripts.forEach((scriptInfo) => {
+        if (cancelled) return;
 
-            newScript.setAttribute("data-ad-position", position);
-            newScript.setAttribute("data-ad-route", routeKey);
-            newScript.async = true;
+        const script = createScript(scriptInfo);
+        insertedScripts.push(script);
+        currentSlot.appendChild(script);
+      });
 
-            externalScripts.push(newScript);
-          } else if (oldScript.textContent) {
-            inlineScripts.push(oldScript.textContent);
-          }
-        } else {
-          currentSlot.appendChild(node.cloneNode(true));
-        }
+      /**
+       * Por último carregamos scripts externos.
+       * Eles são adicionados dentro do próprio bloco do anúncio,
+       * não no document.body.
+       */
+      externalScripts.forEach((scriptInfo) => {
+        if (cancelled) return;
+
+        const script = createScript(scriptInfo);
+        insertedScripts.push(script);
+        currentSlot.appendChild(script);
       });
 
       window.setTimeout(() => {
         if (cancelled) return;
-
-        externalScripts.forEach((script) => {
-          insertedScripts.push(script);
-          document.body.appendChild(script);
-        });
-
-        window.setTimeout(() => {
-          if (cancelled) return;
-
-          inlineScripts.forEach((scriptText) => {
-            executeInlineScript(scriptText);
-          });
-
-          pushAdSense();
-        }, 250);
-      }, 150);
+        pushAdSenseIfNeeded();
+      }, 400);
     }
 
     const timer = window.setTimeout(() => {
